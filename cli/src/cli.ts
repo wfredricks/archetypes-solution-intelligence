@@ -56,7 +56,7 @@ program
 
 program
   .command('login')
-  .description('Authenticate with an ASI/I service via email and access code')
+  .description('Authenticate with an ASI/I identity service via email and access code')
   .option('--url <url>', 'ASI/I base URL (overrides ASI_URL env and project config)')
   .option('--email <email>', 'Email address (skip the email prompt)')
   .action(async (options: { url?: string; email?: string }) => {
