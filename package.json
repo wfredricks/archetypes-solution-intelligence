@@ -1,6 +1,6 @@
 {
   "name": "archetypes-solution-intelligence",
-  "version": "0.1.0-pre",
+  "version": "0.1.1-pre",
   "private": true,
   "description": "Top-level umbrella for the asi adoption of solution-intel. Holds the seed script and shared dev deps.",
   "scripts": {

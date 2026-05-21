@@ -36,6 +36,10 @@ import { VERSION } from './version.js';
 import { loginCommand } from './commands/login.js';
 import { grantCommand } from './commands/grant.js';
 import { revokeCommand } from './commands/revoke.js';
+import {
+  contractsListCommand,
+  contractsShowCommand,
+} from './commands/contracts.js';
 
 const program = new Command();
 
@@ -140,6 +144,54 @@ program
           url: merged.url,
           project: merged.project,
           grantId: merged.grantId,
+        }),
+      );
+    },
+  );
+
+// ─── contracts ───────────────────────────────────────────────────────
+
+// Why: contracts is the read-side surface for the SIG ontology that Task 3
+//       loaded into PolyGraph. Two subcommands: `list` and `show`.
+//       The substrate they query is the asi Solution root + HAS_CONTRACT
+//       edges established by @asi/contract-loader.
+
+const contracts = program
+  .command('contracts')
+  .description('Inspect archetype contracts loaded into the asi SIG');
+
+contracts
+  .command('list')
+  .description('List archetype contracts anchored to the asi Solution root')
+  .option('--namespace <ns>', 'Solution namespace to query', 'asi')
+  .option('--graph-url <url>', 'Bolt URL (defaults to bolt://localhost:7689 or ASI_GRAPH_URL)')
+  .action(async (options: { namespace?: string; graphUrl?: string }) => {
+    process.exit(
+      await contractsListCommand({
+        namespace: options.namespace,
+        graphUrl: options.graphUrl ?? process.env.ASI_GRAPH_URL,
+        graphUser: process.env.ASI_GRAPH_USER,
+        graphPass: process.env.ASI_GRAPH_PASS,
+      }),
+    );
+  });
+
+contracts
+  .command('show <archetype>')
+  .description('Show the structured detail of one archetype contract')
+  .option('--namespace <ns>', 'Solution namespace to query', 'asi')
+  .option('--graph-url <url>', 'Bolt URL (defaults to bolt://localhost:7689 or ASI_GRAPH_URL)')
+  .action(
+    async (
+      archetype: string,
+      options: { namespace?: string; graphUrl?: string },
+    ) => {
+      process.exit(
+        await contractsShowCommand(archetype, {
+          namespace: options.namespace,
+          graphUrl: options.graphUrl ?? process.env.ASI_GRAPH_URL,
+          graphUser: process.env.ASI_GRAPH_USER,
+          graphPass: process.env.ASI_GRAPH_PASS,
         }),
       );
     },

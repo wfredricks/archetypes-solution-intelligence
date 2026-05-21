@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.1.1-pre — 2026-05-21
+
+**Contract ontology realized in PolyGraph; events-spine and simple-auth contracts loaded.**
+
+Task 3 of the SIG-first pivot ([`BUILD-TASK-3-SIG-CONTRACTS-PLAN.md`](../archetypes-bootstrap/BUILD-TASK-3-SIG-CONTRACTS-PLAN.md)) closed the SIG+SDD+DSD loop. Before this release, the asi SIG held exactly one node (the Solution root from v0.1.0-pre). It now holds two anchored archetype contracts with their full sub-node graphs.
+
+### New: `@asi/contract-loader`
+
+A TypeScript module that parses `LEFT-BOOKEND.md` files into in-memory `ContractGraph` payloads and commits them to PolyGraph anchored to the asi Solution root. See [`contract-loader/README.md`](./contract-loader/README.md) for the expected bookend shape and the Cypher schema it writes.
+
+- **`parseBookend(filePath)`** — markdown→graph, tolerant of section numbering / parenthetical suffixes. Reads optional YAML front-matter for stable contract identity (`archetypeName`, `archetypeKind`, `archetypeVersion`).
+- **`commitContract(graph, { namespace })`** — idempotent commit; clears the prior subgraph by `contractId + namespace` before re-creating. Refuses to write if no `Solution` root exists for the namespace (no orphan nodes possible).
+- **`listContracts(namespace)`** / **`showContract(name, namespace)`** — read-side helpers, used by the new CLI subcommand.
+- Tests: 21/21 — 9 parse-events-spine + 9 parse-simple-auth + 3 commit-contract round-trip (live PolyGraph, scoped namespace).
+
+### New: `asi contracts` subcommand
+
+- **`asi contracts list`** — prints the archetype contracts anchored to the asi Solution root.
+- **`asi contracts show <archetypeName>`** — prints the structured detail (Principles / Constraints / Services / Processes / DataObjects / Hypotheses / Compositions).
+- Tests: 4 new tests in `cli/tests/contracts.test.ts` (63/63 cli total).
+
+### Loaded contracts
+
+Both canonical bookends are loaded into the operational asi namespace:
+
+| Archetype | Kind | Version | Nodes | Edges |
+|---|---|---|---|---|
+| `events-spine` | composite | `v0.1.0-pre` | 28 | 28 |
+| `simple-auth` | primitive | `lifted-2026-05-20` | 27 | 27 |
+
+Total SIG growth: **+55 nodes, +55 edges** anchored to the Archetypes Solution root.
+
+### Cypher smoke test
+
+```cypher
+MATCH (s:Solution {namespace: "asi"})-[:HAS_CONTRACT]->(c:Contract)
+RETURN c.archetypeName, c.archetypeKind, count{(c)-[]->()} AS subEdges
+ORDER BY c.archetypeName
+```
+
+Returns two rows: `events-spine` (composite, 27 sub-edges) and `simple-auth` (primitive, 26 sub-edges).
+
+### Bookend convention added: YAML front-matter
+
+`archetypes/events-spine/LEFT-BOOKEND.md` and `archetypes/simple-auth/LEFT-BOOKEND.md` gained a 3-key YAML front-matter block declaring `archetypeName`, `archetypeKind`, and `archetypeVersion`. Documented in [`contract-loader/README.md`](./contract-loader/README.md). Future LEFT-BOOKENDs follow the same convention so identity is explicit rather than inferred.
+
+`simple-auth/LEFT-BOOKEND.md`'s Services and DataObjects sections were also reshaped from bullet-form to `### S<n>:` / `### DO<n>:` item-form to match the canonical events-spine bookend shape. No semantic changes — the same six services and four data objects, named the same way; the parser can now read them cleanly.
+
+### Tests
+
+| Subpackage | Tests | Status |
+|---|---|---|
+| `identity/` | 70/70 | ✅ |
+| `cli/` | 63/63 | ✅ (was 59; +4 contracts CLI tests) |
+| `graph-client/` | 1/1 | ✅ |
+| `contract-loader/` | 21/21 | ✅ (new) |
+| **Total** | **155/155** | ✅ |
+
 ## 0.1.0-pre — 2026-05-21
 
 **First adoption of the `solution-intel` archetype.**

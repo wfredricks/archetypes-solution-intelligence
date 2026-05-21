@@ -1,13 +1,13 @@
 {
-  "name": "@asi/cli",
+  "name": "@asi/contract-loader",
   "version": "0.1.0-pre",
-  "description": "ASI CLI — `asi login`, `asi grant`, `asi revoke`. First adoption of the solution-intel cli slice.",
+  "description": "Parses LEFT-BOOKEND.md files into graph payloads and commits archetype contracts to PolyGraph anchored to the asi Solution root.",
   "author": "William Fredricks",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/wfredricks/archetypes-solution-intelligence.git",
-    "directory": "cli"
+    "directory": "contract-loader"
   },
   "homepage": "https://github.com/wfredricks/archetypes-solution-intelligence#readme",
   "bugs": {
@@ -16,19 +16,19 @@
   "keywords": [
     "archetypes-solution-intelligence",
     "asi",
-    "cli",
-    "knowledge-graph",
-    "audit",
-    "provenance",
+    "sig",
+    "solution-intelligence-graph",
+    "archetype",
+    "contract",
+    "bookend",
+    "polygraph",
+    "neo4j",
     "typescript"
   ],
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "asi": "dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -41,7 +41,6 @@
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix",
@@ -50,15 +49,13 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
-    "@asi/contract-loader": "file:../contract-loader",
-    "commander": "^12.0.0",
+    "neo4j-driver": "^5.27.0",
     "yaml": "^2.6.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
-    "@vitest/coverage-v8": "^2.0.0",
     "eslint": "^8.57.0",
     "prettier": "^3.0.0",
     "tsup": "^8.0.0",
