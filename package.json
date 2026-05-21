@@ -1,0 +1,15 @@
+{
+  "name": "archetypes-solution-intelligence",
+  "version": "0.1.0-pre",
+  "private": true,
+  "description": "Top-level umbrella for the asi adoption of solution-intel. Holds the seed script and shared dev deps.",
+  "scripts": {
+    "seed": "tsx scripts/seed-solution.ts"
+  },
+  "devDependencies": {
+    "neo4j-driver": "^5.27.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^20.0.0"
+  }
+}
