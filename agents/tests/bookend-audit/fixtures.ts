@@ -35,11 +35,19 @@ export function makeFakeBookendDriver(hypotheses: FakeHypothesis[]): Driver {
   const session: Partial<Session> = {
     async run() {
       return {
-        records: hypotheses.map((h) => ({
-          get(field: string) {
-            return (h as unknown as Record<string, unknown>)[field];
-          },
-        })),
+        records: hypotheses.map((h) => {
+          // Why `keys`: Phase 2.5's Neo4jBackend.query() iterates
+          // `record.keys` to build a plain object. The fake mirrors
+          // that surface so the agent path stays uniform across real
+          // Neo4j, fake-Neo4j, and PolyGraph.
+          const obj = h as unknown as Record<string, unknown>;
+          return {
+            get(field: string) {
+              return obj[field];
+            },
+            keys: Object.keys(obj),
+          };
+        }),
         summary: {} as never,
       } as never;
     },

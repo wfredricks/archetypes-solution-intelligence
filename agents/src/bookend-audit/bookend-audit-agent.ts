@@ -3,6 +3,11 @@
  *   Originated 2026-05-22 in archetypes-solution-intelligence under
  *   BUILD-PHASE-1B-PLAN.md §C.
  *
+ *   Refactored 2026-05-22 under BUILD-PHASE-2_5-PLAN.md §2.5.2 to
+ *   consume the Backend adapter (lifted pattern from contract-
+ *   loader/src/backends/) so this agent runs against either Neo4j or
+ *   PolyGraph. Public function signature unchanged.
+ *
  *   Ownership: asi-local. solution-intel archetype's first agent
  *   surface; this package becomes ./reference-impl/agents/ in the
  *   archetype's next snapshot lift.
@@ -29,22 +34,26 @@
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Driver, Session } from 'neo4j-driver';
-import neo4j from 'neo4j-driver';
+import type { Driver } from 'neo4j-driver';
 
+import { selectBackend } from '../backends/select.js';
+import type { Backend } from '../backends/types.js';
 import type { AgentReport, AgentRunOptions, Finding } from '../types.js';
 import { summarize } from '../types.js';
 import { normalizeIsoString } from '../completeness/completeness-agent.js';
 import { parseSnapshot, type ParsedSnapshotRow } from './parse-snapshot.js';
 
 export const AGENT_NAME = 'BookendAuditAgent';
-export const AGENT_VERSION = '0.1.0-pre';
+export const AGENT_VERSION = '0.2.0-pre';
 const DEFAULT_NAMESPACE = 'asi';
-const DEFAULT_GRAPH_URL = 'bolt://localhost:7689';
-const DEFAULT_GRAPH_USER = 'neo4j';
-const DEFAULT_GRAPH_PASS = 'udt-pass-2026';
 
-/** Options for `runBookendAuditAgent`. */
+/**
+ * Options for `runBookendAuditAgent`.
+ *
+ * Phase 2.5 adds two optional fields — `backend` and `polygraphPath`
+ * — passed through to the backend adapter. Selection precedence is
+ * documented in `backends/types.ts` `resolveBackendKind`.
+ */
 export interface BookendAuditOptions extends AgentRunOptions {
   /** Archetype name to audit (e.g. `events-spine`). */
   archetypeName: string;
@@ -52,6 +61,10 @@ export interface BookendAuditOptions extends AgentRunOptions {
   archetypesRepoPath: string;
   /** Optional pre-built driver (caller-owns-driver semantics). */
   driver?: Driver;
+  /** Optional explicit backend selector (Phase 2.5). */
+  backend?: 'neo4j' | 'polygraph';
+  /** Optional leveldb path when using the polygraph backend (Phase 2.5). */
+  polygraphPath?: string;
   /** Optional clock override for tests. */
   now?: () => Date;
 }
@@ -84,19 +97,20 @@ export async function runBookendAuditAgent(opts: BookendAuditOptions): Promise<A
   const ranAt = nowFn().toISOString();
   const archetypeName = opts.archetypeName;
 
-  const ownsDriver = opts.driver === undefined;
-  const driver: Driver = opts.driver ?? makeDriver(opts);
+  const backend = await selectBackend({
+    driver: opts.driver,
+    backend: opts.backend,
+    graphUrl: opts.graphUrl,
+    graphUser: opts.graphUser,
+    graphPass: opts.graphPass,
+    polygraphPath: opts.polygraphPath,
+  });
   const findings: Finding[] = [];
   let sigRows: SigHypothesisRow[] = [];
   try {
-    const session = driver.session();
-    try {
-      sigRows = await fetchSigHypotheses(session, namespace, archetypeName);
-    } finally {
-      await session.close();
-    }
+    sigRows = await fetchSigHypotheses(backend, namespace, archetypeName);
   } finally {
-    if (ownsDriver) await driver.close();
+    await backend.close();
   }
 
   const archetypeDir = path.join(opts.archetypesRepoPath, archetypeName);
@@ -140,13 +154,17 @@ export async function runBookendAuditAgent(opts: BookendAuditOptions): Promise<A
  * // Why: this mirrors the query in
  * // `scripts/snapshot-events-spine.ts` so a SIG-to-snapshot
  * // regeneration would use the same source rows.
+ *
+ * // Bridge-compatible site (Phase 2.5): simple MATCH+RETURN with
+ * // inline-property filters. Both Neo4j and PolyGraph backends
+ * // execute this through `backend.query()` directly.
  */
 async function fetchSigHypotheses(
-  session: Session,
+  backend: Backend,
   namespace: string,
   archetypeName: string,
 ): Promise<SigHypothesisRow[]> {
-  const res = await session.run(
+  const records = await backend.query(
     `MATCH (c:Contract {archetypeName: $archetypeName, namespace: $namespace})
        -[:DECLARES_HYPOTHESIS]->(h:Hypothesis {namespace: $namespace})
      RETURN h.key AS key,
@@ -156,13 +174,13 @@ async function fetchSigHypotheses(
      ORDER BY h.key`,
     { namespace, archetypeName },
   );
-  return res.records.map((rec) => ({
-    key: rec.get('key') as string,
-    text: ((rec.get('text') as string) ?? '').trim(),
-    status: (rec.get('status') as string) ?? '',
+  return records.map((rec) => ({
+    key: rec.key as string,
+    text: ((rec.text as string) ?? '').trim(),
+    status: (rec.status as string) ?? '',
     // Why: same Neo4j-DateTime quirk as in completeness-agent;
     // normalize early so the diff logic sees a string.
-    verifiedAt: normalizeIsoString(rec.get('verifiedAt')),
+    verifiedAt: normalizeIsoString(rec.verifiedAt),
   }));
 }
 
@@ -293,12 +311,4 @@ function extractSnapshotDate(snapshotPath: string): string | null {
   return m ? m[1] : null;
 }
 
-function makeDriver(opts: BookendAuditOptions): Driver {
-  return neo4j.driver(
-    opts.graphUrl ?? DEFAULT_GRAPH_URL,
-    neo4j.auth.basic(
-      opts.graphUser ?? DEFAULT_GRAPH_USER,
-      opts.graphPass ?? DEFAULT_GRAPH_PASS,
-    ),
-  );
-}
+
