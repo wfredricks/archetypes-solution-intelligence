@@ -436,7 +436,9 @@ function parseHypotheses(section: string): Hypothesis[] {
   const headerItems = splitItems(section).filter((it) => /^H\d+/.test(parseHeading(it.heading, ['H']).key));
   for (const { heading, body } of headerItems) {
     const { key, name } = parseHeading(heading, ['H']);
-    out.push({ key, text: name || firstSentence(body), status: 'open' });
+    // Why: bookend-parsed hypotheses are by definition `open` and
+    // unverified; verifiedAt is populated only by writeback scripts.
+    out.push({ key, text: name || firstSentence(body), status: 'open', verifiedAt: null });
   }
 
   if (out.length > 0) return out;
@@ -451,7 +453,9 @@ function parseHypotheses(section: string): Hypothesis[] {
     const text = buffer.trim();
     if (text) {
       counter += 1;
-      out.push({ key: `H${counter}`, text, status: 'open' });
+      // Why: bookend-parsed hypotheses are by definition `open` and
+      // unverified; verifiedAt is populated only by writeback scripts.
+      out.push({ key: `H${counter}`, text, status: 'open', verifiedAt: null });
     }
     buffer = '';
   };

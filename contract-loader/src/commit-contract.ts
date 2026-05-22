@@ -262,10 +262,15 @@ async function doCommit(
     }
 
     for (const h of graph.hypotheses) {
+      // Why: verifiedAt is set to `null` for parsed-from-bookend
+      // hypotheses; writeback scripts later patch it to an ISO-8601
+      // timestamp via a separate SET clause on the existing node.
+      // Including it in the initial CREATE keeps the property surface
+      // consistent (no implicit undefined → missing-property reads).
       await session.run(
         `MATCH (ct:Contract {contractId: $contractId, namespace: $namespace})
          CREATE (n:Hypothesis {
-           key: $key, text: $text, status: $status,
+           key: $key, text: $text, status: $status, verifiedAt: $verifiedAt,
            contractId: $contractId, namespace: $namespace
          })
          CREATE (ct)-[:DECLARES_HYPOTHESIS]->(n)`,
@@ -275,6 +280,7 @@ async function doCommit(
           key: h.key,
           text: h.text,
           status: h.status,
+          verifiedAt: h.verifiedAt ?? null,
         },
       );
       nodeCount += 1;

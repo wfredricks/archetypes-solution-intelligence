@@ -87,6 +87,20 @@ export interface Hypothesis {
   key: string;
   text: string;
   status: 'open' | 'held' | 'partial' | 'violated';
+  /**
+   * ISO-8601 timestamp recording when this hypothesis last had its
+   * status updated by writeback. `null` for parsed-from-bookend
+   * hypotheses (by definition `open` and unverified). Populated by
+   * scripts that write back hypothesis status to the SIG (e.g.
+   * `writeback-events-spine-hypotheses.ts`) and round-tripped through
+   * commit + query.
+   *
+   * // Why: operators inspecting `asi contracts show` need to know not
+   * // just THAT a hypothesis is held, but WHEN that determination was
+   * // last made. Without verifiedAt, a stale `held` is
+   * // indistinguishable from a fresh one.
+   */
+  verifiedAt?: string | null;
 }
 
 /** Acceptance criterion: a verifiable assertion. */

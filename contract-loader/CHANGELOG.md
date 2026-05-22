@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- `Hypothesis.verifiedAt?: string | null` is now part of the hypothesis surface. Parsed bookend hypotheses default it to `null`; `commitContract` writes it on CREATE; `showContract` reads it back. Phase 1a F1.a.
+
+### Tests
+
+- `parse-events-spine.test.ts` asserts every parsed hypothesis is `open` with `verifiedAt === null` (10 tests, +1).
+- `commit-contract.test.ts` adds a round-trip test that flips H6+H7 to `held` with a known ISO timestamp, commits, and reads back via `showContract` (4 tests, +1).
+
 ## 0.1.0-pre — 2026-05-21
 
 **Initial release.** Realizes the ArchiMate-flavored SIG ontology in code and PolyGraph for Task 3 of the SIG-first pivot.
