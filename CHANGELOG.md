@@ -9,6 +9,10 @@
 - **`@asi/contract-loader`**: surface `Hypothesis.verifiedAt` (`string | null`) in `types.ts`, `parseBookend()`, `commitContract()`, and `showContract()`. Parsed bookend hypotheses default to `null`; writeback scripts populate the ISO timestamp. **F1.a**.
 - **`@asi/cli`**: `asi contracts show` renders `h.status` and `h.verifiedAt` inline. Each hypothesis row now reads `Hn: [status] text [verified=<ISO>]`. Operators no longer need cypher to confirm Stage 2d's H6+H7 writeback. **F1.b**.
 
+### Added
+
+- **`scripts/`**: source-controlled the four previously-untracked Stage 2d follow-up utilities — `query-events-spine.ts`, `snapshot-events-spine.ts`, `writeback-events-spine-hypotheses.ts`, `writeback-events-spine-stage-2d.ts` — with provenance headers, `// Why:` comments, idempotency notes, and a refreshed `scripts/README.md` documenting every script (purpose, read/write surface, idempotency). **F3**.
+
 ## 0.1.1-pre — 2026-05-21
 
 **Contract ontology realized in PolyGraph; events-spine and simple-auth contracts loaded.**
