@@ -33,8 +33,8 @@ describe('@asi/agents scaffold', () => {
   it('exposes the agent names and versions', () => {
     expect(agents.COMPLETENESS_AGENT_NAME).toBe('CompletenessAgent');
     expect(agents.BOOKEND_AUDIT_AGENT_NAME).toBe('BookendAuditAgent');
-    expect(agents.COMPLETENESS_AGENT_VERSION).toMatch(/^0\.1\.0-pre$/);
-    expect(agents.BOOKEND_AUDIT_AGENT_VERSION).toMatch(/^0\.1\.0-pre$/);
+    expect(agents.COMPLETENESS_AGENT_VERSION).toMatch(/^0\.2\.0-pre$/);
+    expect(agents.BOOKEND_AUDIT_AGENT_VERSION).toMatch(/^0\.2\.0-pre$/);
   });
 
   it('exposes the staleness helper and threshold', () => {

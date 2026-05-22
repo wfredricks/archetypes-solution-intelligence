@@ -68,11 +68,17 @@ export function makeFakeDriver(opts: FakeSessionOptions): Driver {
   return driver as Driver;
 }
 
-function wrapRecord(obj: FakeRecord): { get: (field: string) => unknown } {
+function wrapRecord(obj: FakeRecord): { get: (field: string) => unknown; keys: string[] } {
+  // Why `keys`: Phase 2.5's Neo4jBackend.query() iterates `record.keys`
+  // to build a plain object (matching Neo4j's record.toObject shape
+  // that the real driver exposes). The fake mirrors that surface so
+  // the agent path stays uniform across real Neo4j, fake-Neo4j, and
+  // PolyGraph.
   return {
     get(field: string) {
       return obj[field];
     },
+    keys: Object.keys(obj),
   };
 }
 
