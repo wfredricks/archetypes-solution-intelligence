@@ -7,6 +7,7 @@
 ### Changed
 
 - **`@asi/contract-loader`**: surface `Hypothesis.verifiedAt` (`string | null`) in `types.ts`, `parseBookend()`, `commitContract()`, and `showContract()`. Parsed bookend hypotheses default to `null`; writeback scripts populate the ISO timestamp. **F1.a**.
+- **`@asi/cli`**: `asi contracts show` renders `h.status` and `h.verifiedAt` inline. Each hypothesis row now reads `Hn: [status] text [verified=<ISO>]`. Operators no longer need cypher to confirm Stage 2d's H6+H7 writeback. **F1.b**.
 
 ## 0.1.1-pre — 2026-05-21
 
