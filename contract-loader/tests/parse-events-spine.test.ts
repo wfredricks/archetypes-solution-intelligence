@@ -66,6 +66,17 @@ describe('parseBookend — events-spine LEFT-BOOKEND.md', () => {
     ]);
   });
 
+  it('parses every hypothesis as open + verifiedAt null', () => {
+    // Why: bookend-parsed hypotheses are by definition `open` and
+    // unverified; writeback scripts later flip status + populate
+    // verifiedAt. If a future parser change forgets to default
+    // verifiedAt, this test surfaces it before commit + round-trip.
+    for (const h of graph.hypotheses) {
+      expect(h.status).toBe('open');
+      expect(h.verifiedAt).toBeNull();
+    }
+  });
+
   it('lists four composed primitives', () => {
     expect(graph.composes.sort()).toEqual(
       ['mcp-proxy', 'scribe', 'simple-pubsub', 'simple-subscriber'].sort(),

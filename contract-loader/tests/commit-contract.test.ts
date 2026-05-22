@@ -21,6 +21,7 @@ import neo4j, { type Driver } from 'neo4j-driver';
 
 import { parseBookend } from '../src/parse-bookend.js';
 import { commitContract, verifyContract } from '../src/commit-contract.js';
+import { showContract } from '../src/query-contracts.js';
 
 const GRAPH_URL = process.env.ASI_GRAPH_URL ?? 'bolt://localhost:7689';
 const GRAPH_USER = process.env.ASI_GRAPH_USER ?? 'neo4j';
@@ -139,5 +140,35 @@ describe('commitContract — round-trip against live PolyGraph', () => {
         driver: driver!,
       }),
     ).rejects.toThrow(/no Solution node found/i);
+  });
+
+  it('round-trips Hypothesis.verifiedAt through commit + show', async () => {
+    // Why: F1.a contract — verifiedAt is written by commit, surfaced by
+    // the query helper, and rendered by the CLI. Parsed bookends have
+    // it null; if a writeback script populated it we must read the same
+    // value back. This test seeds a `verifiedAt` on H6+H7 in memory,
+    // commits, and reads back through showContract.
+    if (!polygraphReachable) return;
+    const graph = parseBookend(EVENTS_SPINE_BOOKEND);
+    const verifiedAtStamp = '2026-05-21T18:00:00.000Z';
+    for (const h of graph.hypotheses) {
+      if (h.key === 'H6' || h.key === 'H7') {
+        h.status = 'held';
+        h.verifiedAt = verifiedAtStamp;
+      }
+    }
+    await commitContract(graph, { namespace: TEST_NAMESPACE, driver: driver! });
+
+    const detail = await showContract('events-spine', TEST_NAMESPACE, {
+      driver: driver!,
+    });
+    expect(detail).not.toBeNull();
+    const byKey = Object.fromEntries(detail!.hypotheses.map((h) => [h.key, h]));
+    expect(byKey.H1.status).toBe('open');
+    expect(byKey.H1.verifiedAt).toBeNull();
+    expect(byKey.H6.status).toBe('held');
+    expect(byKey.H6.verifiedAt).toBe(verifiedAtStamp);
+    expect(byKey.H7.status).toBe('held');
+    expect(byKey.H7.verifiedAt).toBe(verifiedAtStamp);
   });
 });

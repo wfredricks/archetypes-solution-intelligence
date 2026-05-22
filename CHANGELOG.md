@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+**Phase 1a polish batch.** Cross-cutting low-hanging fruit from Stages 2a–2d FINDINGS. See [`artifacts/si-runtime/BUILD-PHASE-1A-PLAN.md`](../si-runtime/BUILD-PHASE-1A-PLAN.md) and the Phase 1a FINDINGS file.
+
+### Changed
+
+- **`@asi/contract-loader`**: surface `Hypothesis.verifiedAt` (`string | null`) in `types.ts`, `parseBookend()`, `commitContract()`, and `showContract()`. Parsed bookend hypotheses default to `null`; writeback scripts populate the ISO timestamp. **F1.a**.
+
 ## 0.1.1-pre — 2026-05-21
 
 **Contract ontology realized in PolyGraph; events-spine and simple-auth contracts loaded.**

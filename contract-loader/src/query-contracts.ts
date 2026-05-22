@@ -47,7 +47,7 @@ export interface ContractDetail extends ContractListEntry {
   services: { key: string; name: string; description: string }[];
   processes: { key: string; name: string; cadence: string }[];
   dataObjects: { key: string; name: string; description: string }[];
-  hypotheses: { key: string; text: string; status: string }[];
+  hypotheses: { key: string; text: string; status: string; verifiedAt: string | null }[];
   composes: string[];
 }
 
@@ -150,7 +150,7 @@ export async function showContract(
       );
       const hypotheses = await session.run(
         `MATCH (c:Contract {contractId: $contractId, namespace: $namespace})-[:DECLARES_HYPOTHESIS]->(n:Hypothesis)
-         RETURN n.key AS key, n.text AS text, n.status AS status
+         RETURN n.key AS key, n.text AS text, n.status AS status, n.verifiedAt AS verifiedAt
          ORDER BY n.key`,
         { contractId, namespace },
       );
@@ -196,6 +196,10 @@ export async function showContract(
           key: r.get('key'),
           text: r.get('text'),
           status: r.get('status'),
+          // Why: Neo4j returns `null` for unset properties; older
+          // Hypothesis nodes pre-dating the verifiedAt addition surface
+          // as null and render without a `verified=` suffix in the CLI.
+          verifiedAt: r.get('verifiedAt') ?? null,
         })),
         composes: composes.records.map((r) => r.get('name') as string),
       };
