@@ -28,52 +28,22 @@ import { LevelAdapter, PolyGraph } from 'polygraph-db';
 import type { EdgeRow, NodeRow } from '../format.js';
 
 /**
- * The known relationship types written by the solution-intel substrate
- * across all archetypes seen to date. Used by the exporter to drive
- * `findRelationships(type)` because PolyGraph v0.1.4 does not expose
- * a "list all rels" API.
+ * Note on PolyGraph v0.1.4 iteration:
  *
- * // Why hard-coded: at v0.1.4 the bridge has no `MATCH ()-[r]->()`
- * // and the API has no `allRelationships()`. Enumerating known types
- * // is the boundary the substrate already maintains in
- * // contract-loader's wipe pattern. If a new edge type is introduced
- * // (a new archetype's contract, a future /imp ontology, etc.), this
- * // list must grow. The Phase 3 FINDINGS calls this out as a gap that
- * // resolves when PolyGraph's qengine ships full graph iteration.
+ * `polygraph-db` at v0.1.4 does not expose an `allRelationships()`
+ * primitive, and `findRelationships(type)` filters by a single type.
+ * We side-step the limitation by walking every node returned by
+ * `allNodes()` and collecting its outgoing edges via
+ * `getNeighbors(nodeId, undefined, 'outgoing')`. This yields every
+ * relationship in the graph exactly once (each edge has exactly one
+ * start-node owner) and is robust against unknown edge types — a new
+ * archetype's edge type appears in the export without any code change
+ * here.
  *
- * The set is empirically derived from:
- *   - contract-loader (HAS_CONTRACT, DECLARES_*, COMPOSES)
- *   - stores Phase 2 /code ontology (HAS_BUSINESS_RULE, IMPLEMENTS,
- *     EXTERNAL_CALL_TO, DERIVED_FROM, BACKED_BY)
- *
- * If the exporter detects a node that has neighbors via a type NOT in
- * this list, it surfaces a warning rather than silently dropping the
- * edge.
+ * Why outgoing-only: a relationship has one tail and one head; the
+ * tail's outgoing list contains it once. Counting both directions
+ * would double-emit every edge.
  */
-const KNOWN_REL_TYPES: readonly string[] = [
-  // /contract ontology (from contract-loader + canonical solution-intel)
-  'HAS_CONTRACT',
-  'DECLARES_PRINCIPLE',
-  'DECLARES_CONSTRAINT',
-  'DECLARES_SERVICE',
-  'DECLARES_PROCESS',
-  'DECLARES_DATAOBJECT',
-  'DECLARES_HYPOTHESIS',
-  'COMPOSES',
-  'OWNS',
-  'PRODUCES',
-  // /code ontology (from stores Phase 2 mining)
-  'HAS_BUSINESS_RULE',
-  'IMPLEMENTS',
-  'EXTERNAL_CALL_TO',
-  'DERIVED_FROM',
-  'BACKED_BY',
-  'CONTAINS',
-  'CALLS',
-  'DEFINED_IN',
-  'PART_OF',
-  'INVOKES',
-];
 
 /**
  * Open a PolyGraph reader. The caller MUST call `close()` when done
@@ -120,26 +90,20 @@ export class PolyGraphReader {
   /**
    * Yield every edge in the instance.
    *
-   * Iterates `KNOWN_REL_TYPES` and unions the result. Edge ids cannot
-   * be preserved on create, so the original id is recorded both as
-   * `id` on the row AND as `properties._originalId` for symmetry
-   * with the Neo4j path.
+   * Iterates every node, collects its outgoing edges. Each edge is
+   * therefore visited exactly once. Edge ids cannot be preserved on
+   * create (PolyGraph mints a UUID), so the original id is recorded
+   * as `properties._originalId` for both backends uniformly. To keep
+   * re-exports idempotent the row's `id` field is anchored to the
+   * existing `_originalId` when one is present (round-tripped edges)
+   * and to the live id when the source has never been exported.
    */
   async *readEdges(_namespace: string): AsyncGenerator<EdgeRow> {
-    for (const type of KNOWN_REL_TYPES) {
-      const rels = await this.graph.findRelationships(type);
-      for (const r of rels) {
+    const nodes = await this.graph.allNodes();
+    for (const n of nodes) {
+      const out = await this.graph.getNeighbors(n.id, undefined, 'outgoing');
+      for (const { relationship: r } of out) {
         const props: Record<string, unknown> = { ...r.properties };
-        // Why preserve _originalId in props: PolyGraph mints a fresh
-        // UUID on createRelationship — there is no caller-chosen id.
-        // To make a round-trip idempotent (re-exporting a round-tripped
-        // instance must produce the SAME sigChecksum), the exporter
-        // anchors the row's `id` to whichever id was the FIRST one
-        // assigned: source exports stamp `_originalId = r.id` on the
-        // first read; subsequent reads of round-tripped relationships
-        // read the already-stamped `_originalId` from properties. The
-        // row's `id` field follows the same anchor so on-disk bytes
-        // match across re-exports.
         const anchorId =
           typeof props._originalId === 'string'
             ? props._originalId
