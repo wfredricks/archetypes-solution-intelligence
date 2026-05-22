@@ -13,6 +13,8 @@
  *     `asi revoke:`
  *   - --url help mentions ASI_URL (was SI_URL)
  *   - Error prefix `si: ${err.message}` → `asi: ${err.message}`
+ *   - Added `asi agents` command group (Phase 1b, 2026-05-22): list,
+ *     completeness run, bookend-audit run; no upstream counterpart yet.
  */
 
 /**
@@ -40,6 +42,12 @@ import {
   contractsListCommand,
   contractsShowCommand,
 } from './commands/contracts.js';
+import {
+  agentsListCommand,
+  completenessRunCommand,
+  bookendAuditRunCommand,
+  parseFormat,
+} from './commands/agents.js';
 
 const program = new Command();
 
@@ -192,6 +200,101 @@ contracts
           graphUrl: options.graphUrl ?? process.env.ASI_GRAPH_URL,
           graphUser: process.env.ASI_GRAPH_USER,
           graphPass: process.env.ASI_GRAPH_PASS,
+        }),
+      );
+    },
+  );
+
+// ─── agents ──────────────────────────────────────────────────────────
+
+// Why: agents is the read-only reports surface. Two agents shipped at
+//       v0.1.0-pre: completeness (SIG walker) and bookend-audit (SIG
+//       vs committed-snapshot diff). The CLI exposes `list` plus
+//       `<name> run` subcommands; reports are reports, so a finding of
+//       severity=error does NOT make the command fail (exit 0 still).
+//       Exit 1 = connection error; exit 2 = bad flag.
+
+const agents = program
+  .command('agents')
+  .description('Read-only agents that walk the asi SIG and emit reports');
+
+agents
+  .command('list')
+  .description('List available agents')
+  .action(() => {
+    process.exit(agentsListCommand());
+  });
+
+const completeness = agents
+  .command('completeness')
+  .description('CompletenessAgent — surface gaps in archetype contracts (read-only)');
+
+completeness
+  .command('run')
+  .description('Run the CompletenessAgent and print its report')
+  .option('--namespace <ns>', 'Solution namespace to query', 'asi')
+  .option('--graph-url <url>', 'Bolt URL (defaults to bolt://localhost:7689 or ASI_GRAPH_URL)')
+  .option('--format <fmt>', 'Output format: markdown | json', 'markdown')
+  .action(
+    async (options: { namespace?: string; graphUrl?: string; format?: string }) => {
+      const format = parseFormat(options.format);
+      if (format === null) {
+        process.stderr.write(
+          `asi agents completeness run: unknown --format "${options.format}" (expected markdown|json)\n`,
+        );
+        process.exit(2);
+      }
+      process.exit(
+        await completenessRunCommand({
+          namespace: options.namespace,
+          graphUrl: options.graphUrl ?? process.env.ASI_GRAPH_URL,
+          graphUser: process.env.ASI_GRAPH_USER,
+          graphPass: process.env.ASI_GRAPH_PASS,
+          format,
+        }),
+      );
+    },
+  );
+
+const bookendAudit = agents
+  .command('bookend-audit')
+  .description('BookendAuditAgent — diff a SIG-regenerated snapshot against the committed file');
+
+bookendAudit
+  .command('run')
+  .description('Run the BookendAuditAgent for one archetype and print its report')
+  .option('--archetype <name>', 'Archetype to audit (e.g. events-spine)')
+  .option(
+    '--archetypes-repo <path>',
+    'Path to a wfredricks/archetypes checkout',
+  )
+  .option('--namespace <ns>', 'Solution namespace to query', 'asi')
+  .option('--graph-url <url>', 'Bolt URL (defaults to bolt://localhost:7689 or ASI_GRAPH_URL)')
+  .option('--format <fmt>', 'Output format: markdown | json', 'markdown')
+  .action(
+    async (options: {
+      archetype?: string;
+      archetypesRepo?: string;
+      namespace?: string;
+      graphUrl?: string;
+      format?: string;
+    }) => {
+      const format = parseFormat(options.format);
+      if (format === null) {
+        process.stderr.write(
+          `asi agents bookend-audit run: unknown --format "${options.format}" (expected markdown|json)\n`,
+        );
+        process.exit(2);
+      }
+      process.exit(
+        await bookendAuditRunCommand({
+          archetype: options.archetype,
+          archetypesRepo: options.archetypesRepo,
+          namespace: options.namespace,
+          graphUrl: options.graphUrl ?? process.env.ASI_GRAPH_URL,
+          graphUser: process.env.ASI_GRAPH_USER,
+          graphPass: process.env.ASI_GRAPH_PASS,
+          format,
         }),
       );
     },
