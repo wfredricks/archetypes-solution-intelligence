@@ -1,13 +1,13 @@
 {
-  "name": "@asi/cli",
+  "name": "@asi/instance",
   "version": "0.1.0-pre",
-  "description": "ASI CLI — `asi login`, `asi grant`, `asi revoke`. First adoption of the solution-intel cli slice.",
+  "description": "Whole-instance export/import skeleton for solution-intel SI instances. Produces a portable tar.gz carrying SIG + audit ledger + identity records + resolved markers + schema-version stamp; consumes it back. Backend-agnostic format (PolyGraph + Neo4j). Empty migrations catalog (v0.2.0-pre baseline).",
   "author": "William Fredricks",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/wfredricks/archetypes-solution-intelligence.git",
-    "directory": "cli"
+    "directory": "instance"
   },
   "homepage": "https://github.com/wfredricks/archetypes-solution-intelligence#readme",
   "bugs": {
@@ -16,53 +16,49 @@
   "keywords": [
     "archetypes-solution-intelligence",
     "asi",
-    "cli",
-    "knowledge-graph",
-    "audit",
-    "provenance",
+    "instance",
+    "export",
+    "import",
+    "snapshot",
+    "portability",
+    "sig",
+    "polygraph",
+    "neo4j",
     "typescript"
   ],
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "asi": "dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "LICENSE", "README.md", "CHANGELOG.md"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests",
-    "lint:fix": "eslint src tests --fix",
-    "format": "prettier --write src tests",
-    "format:check": "prettier --check src tests",
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
-    "@asi/agents": "file:../agents",
     "@asi/contract-loader": "file:../contract-loader",
-    "@asi/instance": "file:../instance",
-    "commander": "^12.0.0",
-    "yaml": "^2.6.1"
+    "neo4j-driver": "^5.27.0",
+    "polygraph-db": "file:../../polygraph"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "@vitest/coverage-v8": "^2.0.0",
-    "eslint": "^8.57.0",
-    "prettier": "^3.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.6.0",
     "vitest": "^2.0.0"

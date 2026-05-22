@@ -48,6 +48,10 @@ import {
   bookendAuditRunCommand,
   parseFormat,
 } from './commands/agents.js';
+import {
+  instanceExportCommand,
+  instanceImportCommand,
+} from './commands/instance.js';
 
 const program = new Command();
 
@@ -295,6 +299,108 @@ bookendAudit
           graphUser: process.env.ASI_GRAPH_USER,
           graphPass: process.env.ASI_GRAPH_PASS,
           format,
+        }),
+      );
+    },
+  );
+
+// ─── instance ───────────────────────────────────────────────────────
+
+// Why: instance is the operator surface for the whole-instance snapshot
+//       contract from INSTANCE-PORTABILITY.md. Two subcommands:
+//         - `export` writes a tar.gz that carries SIG + audit + grants
+//           + resolved markers + schema-version stamp
+//         - `import` consumes a tar.gz, validates the stamp, restores
+//           the SIG + ledger + grants, and records `instance.import.completed`
+//
+//       The CLI is thin; the work happens in @asi/instance.
+
+const instanceCmd = program
+  .command('instance')
+  .description('Whole-instance export/import (snapshot the SIG, audit ledger, identity records, and schema-version stamp)');
+
+instanceCmd
+  .command('export')
+  .description('Produce a tar.gz snapshot of the running instance')
+  .requiredOption('--output <path>', 'Output path for the tarball (e.g. data/exports/instance-2026-05-22.tar.gz)')
+  .option('--namespace <ns>', 'Solution namespace to export', 'asi')
+  .option('--backend <kind>', 'Backend: polygraph | neo4j', 'neo4j')
+  .option('--polygraph-path <path>', 'Leveldb directory when --backend polygraph')
+  .option('--graph-url <url>', 'Bolt URL when --backend neo4j (defaults to ASI_GRAPH_URL)')
+  .option('--audit-path <path>', 'Path to the source audit ledger (audit.jsonl)')
+  .option('--grants-path <path>', 'Path to the source identity grants ledger (grants.jsonl)')
+  .option('--resolved-markers-path <path>', 'Path to .si/config.yaml or equivalent')
+  .option('--substrate-version <version>', 'Substrate version stamp (manifest)', '0.2.0-pre')
+  .option('--instance-schema-version <version>', 'Instance schema version (drives migrations on import)', '0.2.0-pre')
+  .action(
+    async (options: {
+      output: string;
+      namespace?: string;
+      backend?: string;
+      polygraphPath?: string;
+      graphUrl?: string;
+      auditPath?: string;
+      grantsPath?: string;
+      resolvedMarkersPath?: string;
+      substrateVersion?: string;
+      instanceSchemaVersion?: string;
+    }) => {
+      process.exit(
+        await instanceExportCommand({
+          output: options.output,
+          namespace: options.namespace,
+          backend: options.backend,
+          polygraphPath: options.polygraphPath,
+          graphUrl: options.graphUrl ?? process.env.ASI_GRAPH_URL,
+          graphUser: process.env.ASI_GRAPH_USER,
+          graphPass: process.env.ASI_GRAPH_PASS,
+          auditPath: options.auditPath,
+          grantsPath: options.grantsPath,
+          resolvedMarkersPath: options.resolvedMarkersPath,
+          substrateVersion: options.substrateVersion,
+          instanceSchemaVersion: options.instanceSchemaVersion,
+        }),
+      );
+    },
+  );
+
+instanceCmd
+  .command('import')
+  .description('Restore an instance from a tarball produced by `asi instance export`')
+  .requiredOption('--input <path>', 'Path to the export tarball')
+  .option('--namespace <ns>', 'Solution namespace to restore into', 'asi')
+  .option('--backend <kind>', 'Backend: polygraph | neo4j', 'neo4j')
+  .option('--polygraph-path <path>', 'Leveldb directory when --backend polygraph')
+  .option('--graph-url <url>', 'Bolt URL when --backend neo4j (defaults to ASI_GRAPH_URL)')
+  .option('--audit-path <path>', 'Path to the target audit ledger (audit.jsonl) — appended')
+  .option('--grants-path <path>', 'Path to the target identity grants ledger (grants.jsonl) — appended')
+  .option('--substrate-version <version>', 'Substrate version doing the import (for migration lookup)', '0.2.0-pre')
+  .option('--force', 'Overlay onto a non-empty target instance', false)
+  .action(
+    async (options: {
+      input: string;
+      namespace?: string;
+      backend?: string;
+      polygraphPath?: string;
+      graphUrl?: string;
+      auditPath?: string;
+      grantsPath?: string;
+      substrateVersion?: string;
+      force?: boolean;
+    }) => {
+      process.exit(
+        await instanceImportCommand({
+          input: options.input,
+          namespace: options.namespace,
+          backend: options.backend,
+          polygraphPath: options.polygraphPath,
+          graphUrl: options.graphUrl ?? process.env.ASI_GRAPH_URL,
+          graphUser: process.env.ASI_GRAPH_USER,
+          graphPass: process.env.ASI_GRAPH_PASS,
+          auditPath: options.auditPath,
+          grantsPath: options.grantsPath,
+          substrateVersion: options.substrateVersion,
+          force: options.force,
         }),
       );
     },
