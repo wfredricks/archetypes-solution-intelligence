@@ -149,6 +149,68 @@ describe('asi contracts CLI', () => {
     expect(text).toMatch(/## Hypotheses \(7\)/);
   });
 
+  it('show renders [open] status with no verified suffix for parsed hypotheses', async () => {
+    // Why: F1.b contract — every bookend-parsed hypothesis is `open` and
+    // unverified; the CLI must surface `[open]` and must NOT print a
+    // ` verified=` suffix when verifiedAt is null.
+    if (!polygraphReachable) return;
+    const out = new PassThrough();
+    const err = new PassThrough();
+    const code = await contractsShowCommand('events-spine', {
+      namespace: TEST_NAMESPACE,
+      stdout: out,
+      stderr: err,
+    });
+    out.end();
+    err.end();
+    expect(code).toBe(0);
+    const text = await collect(out);
+    // Every hypothesis row should carry an [open] status tag.
+    expect(text).toMatch(/H1: \[open\]\s+/);
+    expect(text).toMatch(/H7: \[open\]\s+/);
+    // No `verified=` should appear yet.
+    expect(text).not.toMatch(/verified=/);
+  });
+
+  it('show renders [held] status + verified=<ISO> for written-back hypotheses', async () => {
+    // Why: F1.b contract — once writeback flips H6+H7 to `held` with an
+    // ISO timestamp, the CLI must surface both inline. The loader's
+    // round-trip is covered in contract-loader/tests; here we assert the
+    // CLI render shape end-to-end.
+    if (!polygraphReachable) return;
+    const graph = parseBookend(EVENTS_SPINE_BOOKEND);
+    const verifiedAtStamp = '2026-05-21T18:30:00.000Z';
+    for (const h of graph.hypotheses) {
+      if (h.key === 'H6' || h.key === 'H7') {
+        h.status = 'held';
+        h.verifiedAt = verifiedAtStamp;
+      }
+    }
+    await commitContract(graph, { namespace: TEST_NAMESPACE, driver: driver! });
+
+    const out = new PassThrough();
+    const err = new PassThrough();
+    const code = await contractsShowCommand('events-spine', {
+      namespace: TEST_NAMESPACE,
+      stdout: out,
+      stderr: err,
+    });
+    out.end();
+    err.end();
+    expect(code).toBe(0);
+    const text = await collect(out);
+    // Why: hypothesis text can span newlines (parser preserves multi-line
+    // bullet bodies), so use [\s\S]*? to match across them up to the
+    // verified= suffix the renderer appends to ${h.text}${verified}.
+    expect(text).toMatch(new RegExp(`H6: \\[held\\]\\s+[\\s\\S]*?verified=${verifiedAtStamp}`));
+    expect(text).toMatch(new RegExp(`H7: \\[held\\]\\s+[\\s\\S]*?verified=${verifiedAtStamp}`));
+    // H1 still open + still no verified= suffix on its line.
+    expect(text).toMatch(/H1: \[open\]\s+/);
+    const h1Line = text.split('\n').find((l) => l.includes('H1:'));
+    expect(h1Line).toBeDefined();
+    expect(h1Line!).not.toMatch(/verified=/);
+  });
+
   it('show returns exit 1 for an unknown archetype', async () => {
     if (!polygraphReachable) return;
     const out = new PassThrough();

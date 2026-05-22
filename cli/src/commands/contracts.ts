@@ -146,7 +146,16 @@ export async function contractsShowCommand(
       detail.dataObjects,
       (d) => `${d.key}: ${d.name}`,
     );
-    writeSection(out, 'Hypotheses', detail.hypotheses, (h) => `${h.key}: ${h.text}`);
+    // Why: Stage 2d wrote hypothesis status back to the SIG, but the
+    // operator-facing view still rendered only `text`. Surfacing
+    // `[status]` + optional ` verified=<ISO>` inline closes the loop —
+    // operators no longer need cypher to see which hypotheses are
+    // `held` and when. F1.b (Phase 1a).
+    writeSection(out, 'Hypotheses', detail.hypotheses, (h) => {
+      const status = pad(`[${h.status}]`, 10);
+      const verified = h.verifiedAt ? ` verified=${h.verifiedAt}` : '';
+      return `${h.key}: ${status} ${h.text}${verified}`;
+    });
     return 0;
   } catch (err) {
     opts.stderr.write(`asi contracts show: ${(err as Error).message}\n`);

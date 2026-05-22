@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `asi contracts show <archetype>` now renders `h.status` (e.g. `[open]`, `[held]`) and `h.verifiedAt` inline next to each hypothesis. Verified hypotheses get a trailing ` verified=<ISO>`; unverified ones do not. Phase 1a F1.b.
+
+### Tests
+
+- `tests/contracts.test.ts` adds two cases: `[open]` rendered for parsed hypotheses with no `verified=` suffix; `[held]` + ` verified=<ISO>` rendered after H6+H7 writeback (6 tests in file, +2; 65 total, +2).
+
 ## [0.2.1-pre] — 2026-05-21
 
 Stage 2c deliverable. Pre-work for Stage 3 (Graph + GraphLoader). Two
